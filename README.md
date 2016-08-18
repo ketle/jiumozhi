@@ -20,6 +20,7 @@
 > **使用上的区别:**
 
 > - 查看SiteConfig目录下 数字.php 具体配置,因为用php搞的,各种传递参数啥的都不一样,但看起来大体一样;
+> - 用Xpath取回来的是innerHtml
 > - jsonpath没怎么弄
 > - contentUrlRegexes helperUrlRegexes 规则里没带域名
 
