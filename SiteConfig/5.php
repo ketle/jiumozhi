@@ -5,7 +5,7 @@ $configs = [];
 $configs['id'] = 5; //文件名
 $configs['title'] = 'huxiu'; //标题
 $configs['desc'] = 'huxiu'; //描述
-//额外信息
+//额外信息 
 
 $configs['domains'] = ['huxiu.com'];
 $configs['scanUrls'] = ['https://www.huxiu.com/'];
