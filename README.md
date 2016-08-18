@@ -24,16 +24,16 @@
 > - contentUrlRegexes helperUrlRegexes 规则里没带域名
 
 #### <i class="icon-hdd"></i> 如何安装
-> git clone https://github.com/ketle/jiumozhi.git
-> composer install
-
-#### <i class="icon-hdd"></i> 如何安装
-> git clone https://github.com/ketle/jiumozhi.git
-> composer install
+```
+git clone https://github.com/ketle/jiumozhi.git
+composer install
+```
 
 #### <i class="icon-file"></i> 如何开始
-> 浏览器打开: http://ip/path/index.php
-> 自带了5个例子,点"测试"就可以了,因为抓回来的都是html,可能看起来页面会乱,那就"查看源代码" 即可;
+```
+浏览器打开: http://ip/path/index.php
+自带了5个例子,点"测试"就可以了,因为抓回来的都是html,可能看起来页面会乱,那就"查看源代码" 即可;
+```
 
 #### <i class="icon-file"></i> 为啥叫"鸠摩智"
-拍脑袋想出来的,不敢称第一,鸠摩智水平吧,哈哈哈
+拍脑袋想出来的,哈哈哈
