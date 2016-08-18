@@ -264,7 +264,7 @@ class Crawler {
         }
         $this->queueObj->addLast(["url"=>$url,"opt"=>$opt]);  
 
-        $this->log('add queue:'.$url); 
+        //$this->log('add queue:'.$url); 
 
     }
 
