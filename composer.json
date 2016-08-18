@@ -1,0 +1,12 @@
+{
+    "require": {
+        "catfan/Medoo": "^1.1",
+        "php-curl-class/php-curl-class": "^5.0",
+        "imangazaliev/didom": "^1.7"
+    },
+  "autoload": {
+    "classmap": [
+      "Crawler"
+    ]
+  }
+}
