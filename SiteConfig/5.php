@@ -29,7 +29,7 @@ $configs['fields'] = [
                         [    
                             'name'=>'article_content',
                             'alias'=>'内容',
-                            'selector'=>"//div[@id='article_content2']",
+                            'selector'=>"//div[@id='article_content']",
                             'selectorType'=>'XPath'
                             
                         ],
