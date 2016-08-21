@@ -15,6 +15,7 @@ class Crawler {
     private $page = [];
     private $skip = '';
     private $pauseDrive; 
+    private $db; 
     private $console; 
     private $scanUrlsIndex = 0;
 
@@ -25,13 +26,17 @@ class Crawler {
         $this->configs = $configs;
         $this->initSite();
         $this->initPage();
+        $this->initDb();
         $this->pauseDrive = PauseFactory::Create( 'Xpath' );
+
+
 
 
         $temp1 = parse_url($this->configs['scanUrls'][$this->scanUrlsIndex]);
         $this->configs['baseUrl'] = $temp1['scheme'].'://'.$temp1['host'].'/';
         $this->configs['baseUrlPath'] = $temp1['scheme'].'://'.$temp1['host'].$temp1['path'];
         $this->addQueue($this->configs['scanUrls'][$this->scanUrlsIndex],['type'=>1]); 
+        unset($temp1);
         
     }
 
@@ -65,7 +70,8 @@ class Crawler {
                 if ($this->configs['scanUrls'][$this->scanUrlsIndex]) {
                     $queueArray[] = ['url'=>$this->configs['scanUrls'][$this->scanUrlsIndex]];                
                 }else{
-                    die('done');
+                    break;
+                    //die('done');
                 }
             }
             //判断队列是否为空,下一个ScanUrl
@@ -73,17 +79,15 @@ class Crawler {
             //
             $this->configs['onChangeProxy']($this->site); //onChangeProxy回调
             $this->curl($queueArray);
+            unset($queueArray);
 
             $this->curlObj->success(function($instance) {
                 $this->log('curl:'.$instance->url); 
-                
-                $url = $instance->url; 
-                $content = $this->convertUtf8($instance->response);
-
-                
-
-                $this->page['url'] = $url;
-                $this->page['raw'] = $content.$instance->requestHeaders['contextData']; //加上附加数据
+                  
+                $this->page['url'] = $instance->url;
+      
+                $this->page['raw'] = $instance->response;
+                $this->page['raw'] = $this->convertUtf8($this->page['raw']).$instance->requestHeaders['contextData']; //加上附加数据
                 
 
                 if ($instance->requestHeaders['contextData']) {
@@ -93,17 +97,16 @@ class Crawler {
                 $this->page['request'] = $instance;//还没改造
  
 
-                $this->configs['isAntiSpider']($url,$this->page['raw']); //isAntiSpider回调
+                $this->configs['isAntiSpider']($this->page['url'],$this->page['raw']); //isAntiSpider回调
                 $this->configs['afterDownloadPage']($this->page,$this->site); //afterDownloadPage回调 
                 
 
                 //scanUrls
-                if (in_array($url, $this->configs['scanUrls'])) {
-                    //echo $url.' : '.$value.'<br>';//die;
-                    $this->log('in scanUrls:'.$url); 
+                if (in_array($this->page['url'], $this->configs['scanUrls'])) {
+                    $this->log('in scanUrls:'.$this->page['url']); 
                                                      
                     $r1 = $this->configs['onProcessScanPage']($this->page,$this->page['raw'],$this->site); //onProcessScanPage 回调
-                    //$this->log('preg_match:'.$value.' -> '.$url); 
+                    //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
                     if ($r1 == true) {
                         $this->parseAllUrl($this->page['raw']); 
                     } 
@@ -114,8 +117,8 @@ class Crawler {
 
                 //列表页
                 foreach ($this->configs['helperUrlRegexes'] as $key => $value) {
-                    if (preg_match("|".$value."$|", $url)) {   
-                        $this->log('in helperUrl:'.$url); 
+                    if (preg_match("|".$value."$|", $this->page['url'])) {   
+                        $this->log('in helperUrl:'.$this->page['url']); 
 
                         if (strstr($instance->responseHeaders['content-type'],'application/json')) { //列表页是json数据
                             $this->page['raw'] = serialize($this->page['raw']);
@@ -125,8 +128,8 @@ class Crawler {
                         
                         if (!$this->configs['contentUrlRegexes']) {
                             //当内容页正则为空时,可以直接解析列表页
-                            //$this->log('xxxxxxxxxxxxxxx:'.$url);      
-                            $this->parseData($url,$this->page['raw']);
+                            //$this->log('xxxxxxxxxxxxxxx:'.$this->page['url']);      
+                            $this->parseData($this->page['url'],$this->page['raw']);
                         }
                         if ($r1 == true) {
                             $this->parseAllUrl($this->page['raw']); 
@@ -141,12 +144,11 @@ class Crawler {
 
                 //内容页                
                 foreach ($this->configs['contentUrlRegexes'] as $key => $value) {
-                    //echo $url.' : '.$value.'<br>';//die;
-                    if (preg_match("|".$value."$|", $url)) {                            
-                        $this->log('in contentUrl:'.$url);        
+                    if (preg_match("|".$value."$|", $this->page['url'])) {                            
+                        $this->log('in contentUrl:'.$this->page['url']);        
                         $r1 = $this->configs['onProcessContentPage']($this->page,$this->page['raw'],$this->site); //onProcessContentPage 回调
-                        //$this->log('preg_match:'.$value.' -> '.$url); 
-                        $this->parseData($url,$this->page['raw']);
+                        //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
+                        $this->parseData($this->page['url'],$this->page['raw']);
                         if ($r1 == true) {
                             $this->parseAllUrl($this->page['raw']); 
                         }
@@ -156,7 +158,7 @@ class Crawler {
                     }
                 } 
                 //内容页  
-                
+                unset($instance);            
 
                 ob_flush();
                 flush();
@@ -165,11 +167,10 @@ class Crawler {
 
             $this->curlObj->error(function($instance) {
                 $this->log('call to "' . $instance->url . '" was unsuccessful.' . "\n".'error code: ' . $instance->errorCode . "\n".'error message: ' . $instance->errorMessage . "\n",3);
+                unset($instance);       
             }); 
 
             $this->curlObj->start();
-
-            //die;  
 
         }
 
@@ -197,9 +198,11 @@ class Crawler {
                 if (!$temp1['host'] || in_array($temp1['host'], $this->configs['domains']) ) {
                     $this->urlRegexes($value); 
                 }
+                unset($temp1);
                 
                 
             }
+            unset($urlData);
         }
        
     }
@@ -214,7 +217,6 @@ class Crawler {
  
 
             foreach ($this->configs['helperUrlRegexes'] as $key => $value) {
-                //echo $url.$value;die;
                 if (preg_match("|^".$value."$|", $url)) {  
                     $this->addQueue($url,['type'=>2]); //进队列
                     break;
@@ -263,6 +265,9 @@ class Crawler {
             //绝对地址
         }
         $this->queueObj->addLast(["url"=>$url,"opt"=>$opt]);  
+        unset($temp1);
+        unset($url);
+        unset($opt);
 
         //$this->log('add queue:'.$url); 
 
@@ -284,6 +289,7 @@ class Crawler {
         $skipFlag = $this->array_search_key('skipAllPage998', $fieldContent);
         if ($skipFlag) {
             unset($fieldContent);//site->skip
+            unset($skipFlag);
         }
 
         //transient 删除字段
@@ -293,13 +299,30 @@ class Crawler {
                 $this->log('delKey:'.(string)$value,1);
                 $this->array_remove_key($fieldContent, (string)$value);
             }
+            unset($delKey);
         }  
 
         $this->configs['afterExtractPage']($this->page,$fieldContent); //afterExtractPage回调
 
 
-        $this->log('fieldContent:');
-        $this->log($fieldContent,1);
+        if ($this->db && $fieldContent) {
+            $this->db->insert($this->tableName, [
+                "site" => $this->configs['id'],
+                "url" => $url,
+                "data" => $fieldContent
+            ]);
+        }
+
+        if ($this->configs['debug'] ) {
+            $this->log('fieldContent:');
+            $this->log($fieldContent,1);
+        }else{
+            $this->log('quequeLeft:'.$this->queueObj->getLength(),1);
+        }
+
+        unset($fieldContent);
+        unset($content);
+        
 
 
 
@@ -318,7 +341,6 @@ class Crawler {
     public function parseFields($fields,$content){
         
         
-        //print_r($fields);die;
 
         foreach ($fields as $k =>  $value) { //第一层
             $pf = $value['selectorType'] != 'Xpath' ?  PauseFactory::Create( $value['selectorType'] ): $this->pauseDrive; 
@@ -350,16 +372,14 @@ class Crawler {
              * 控制required,page.skip()
              */
             if ($value['required'] && !$con[$value['name']]) { //判断required
+                $con['skipAllPage998'] = 1;//设置一个特殊key,方便查找,找到即可删掉这整条数据;
                 $this->log('required:'.$value['name'],3);
-                return ; 
+                //return $con;
             }
             if ($this->skip) {
                 if ($this->skip == 'skipAllPage998') {
-                    $con[$this->skip] = 1;//设置一个特殊key,方便查找,找到即可删掉这整条数据;
+                    $con['skipAllPage998'] = 1;//设置一个特殊key,方便查找,找到即可删掉这整条数据;
                 }
-            }
-            if ($value['transient']) {
-                //$value['transient'] = $value['name'];//设置transient为name,方便之后查找删掉整条数据的这个key;
             }
 
             
@@ -382,6 +402,7 @@ class Crawler {
                              * 控制required,page.skip()
                              */
                             if (!$con[$value['name']][$k2]) {
+                                $this->log('required2:'.$value['name'],3);
                                 unset($con[$value['name']][$k2]);
                             }
 
@@ -406,6 +427,10 @@ class Crawler {
             } 
 
         }
+
+        unset($contentRepeat);
+        unset($content);
+        unset($fields);
 
         return $con; 
 
@@ -438,6 +463,10 @@ class Crawler {
      */
 
     public function curl($queueArray){
+
+        if ($this->curlTimes%10 == 0) {
+            unset($this->curlObj);
+        }
 
         $this->curlObj = $this->curlObj?$this->curlObj:new MultiCurl();
 
@@ -614,22 +643,25 @@ class Crawler {
                         unset($arr[$k]); 
                     }
                 } 
-            } 
+            }  
         }
     }
  
 
     public function array_search_key( $search, array $array, $mode = 'key'){    
         $res = array();  
-        foreach (new RecursiveIteratorIterator(new RecursiveArrayIterator($array)) as $key => $value) {  
+        $temp1 = new RecursiveIteratorIterator(new RecursiveArrayIterator($array));
+        foreach ($temp1 as $key => $value) {  
             if ($search === ${${"mode"}}){  
                 if($mode == 'key'){  
                     $res[] = $value;  
                 }else{  
                     $res[] = $key;  
-                }  
+                }
+                unset($search);
             }  
-        }  
+        } 
+        unset($temp1);
         return $res;    
     }
 
@@ -660,6 +692,7 @@ class Crawler {
                 $temp2 = explode('=', trim($value));
                 $this->site['cookie'][$temp2[0]] = urldecode($temp2[1]);
             }
+            unset($temp1);
             
         };
 
@@ -687,10 +720,55 @@ class Crawler {
         $this->page['skip'] = function ($fieldName='') {
             $fieldName = $fieldName?$fieldName:'skipAllPage998';
             $this->skip = $fieldName;
+            unset($fieldName);
 
             $this->log('$this->skip:'.$this->skip,3);
         }; 
 
+    }
+
+    public function initDb(){
+
+        if ($this->configs['dbConfig']) {
+            
+            $this->db = new \medoo($this->configs['dbConfig']['db']); 
+
+            $this->tableName = 'jmz_data'.$this->configs['id'];
+            
+
+            $count = $this->db->count($tableName, []);
+            
+            if (!$count) {
+                $this->db->query("CREATE TABLE IF NOT EXISTS `".$this->tableName."` (
+                      `id` int(11) NOT NULL,
+                      `create_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      `update_date` datetime DEFAULT NULL,
+                      `site` int(5) NOT NULL DEFAULT '0',
+                      `url` varchar(200) NOT NULL,
+                      `data` longtext,
+                      `other` text,
+                      `flag` int(3) NOT NULL DEFAULT '1'
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+                    ALTER TABLE `".$this->tableName."`
+                      ADD PRIMARY KEY (`id`),
+                      ADD UNIQUE KEY `site` (`site`,`url`);
+
+
+                    ALTER TABLE `".$this->tableName."`
+                      MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;");
+            }
+            unset($count);
+
+
+
+
+            if ($this->configs['dbConfig']['insertType'] == 2) {
+                $this->db->delete($this->tableName, ["site" => $this->configs['id']]);
+            }
+ 
+        }
     }
  
     /**
@@ -713,6 +791,7 @@ class Crawler {
         }else{
             echo "$str <br>\n";
         }
+        unset($str);
 
 
     }

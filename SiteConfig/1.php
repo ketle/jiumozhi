@@ -33,11 +33,7 @@ $configs['isAntiSpider'] = function (&$url,&$content) {
     return ;
 };
 $configs['afterDownloadPage'] = function (&$page,&$site) {
-	print_r($site['header']) ;
-
-	if ($site) {
-		//echo 111;
-	}
+	
     return ;
 };
 $configs['afterDownloadAttachedPage'] = function (&$page,&$site) {
@@ -48,6 +44,8 @@ $configs['onProcessScanPage'] = function (&$page,&$content,&$site) {
     print_r($site['scanUrls']);
     print_r($site['helperUrls']);
     print_r($site['contentUrls']);*/
+
+    $site['addUrl']('http://fuliba.net/%e6%88%91%e6%9c%89%e4%b8%80%e4%b8%aa%e6%a2%a6%e6%83%b3%ef%bc%9a%e9%9d%a2%e6%9c%9d%e5%8f%b8%e6%9c%ba%ef%bc%8c%e4%ba%ba%e6%bb%a1%e8%bd%a6%e5%bc%80.html');
     return true;
 };
 $configs['onProcessHelperPage'] = function (&$page,&$content,&$site) {
@@ -64,10 +62,10 @@ $configs['beforeCacheImg'] = function (&$fieldName,&$url) {
     return ;
 };
 $configs['afterExtractField'] = function (&$fieldName,&$data,&$page) {
-    if ($fieldName == 'article_title' && trim($data) == '翻山新科技，i42.li，配置仅需两步') {
+    //if ($fieldName == 'article_title' && trim($data) == '翻山新科技，i42.li，配置仅需两步') {
         //print_r($data);die;
         //$page['skip']();
-    }
+    //}
     return ;
 };
 $configs['beforeCacheImg'] = function (&$page,&$data) {

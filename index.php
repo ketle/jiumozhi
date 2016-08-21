@@ -1,5 +1,6 @@
 <?php
 set_time_limit(0);
+ini_set('memory_limit', '3000M');
 ignore_user_abort(true);
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
@@ -38,6 +39,11 @@ if (!$_GET['file']) {
         $crawler = new Crawler($configs);
         $crawler->start(); 
     }elseif ($_GET['act'] == 'start') {
+
+        $configs['dbConfig'] = include './config.php';
+        //print_r($dbConfig);die;
+        
+
         @unlink($configs['siteConfigDir'].$configs['id'].'stop.txt');
         $crawler = new Crawler($configs);
         $crawler->start(); 
