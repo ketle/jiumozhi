@@ -1,4 +1,4 @@
-鸠摩智简介
+鸠摩智(多进程版)简介
 -------------
 前几天看到 http://doc.shenjianshou.cn/ 觉得不错,就省下几天守望开车时间照着文档用php实现了一遍,下面是对比shenjianshou的不足,改进和使用上的区别
 
@@ -14,6 +14,7 @@
 
 > **特点/改进:**
 
+> - 多进程,现在只能在liunx下使用了,单进程很容易内存耗尽- -
 > - 使用curl multi"多线程",可以自定义"线程"数,速度刷刷刷的
 > - 支持css选择器,xpath,正则3种选择器
 
@@ -33,11 +34,12 @@ composer install
 
 #### <i class="icon-file"></i> 如何开始
 ```
-配置config.php下db设置
-浏览器打开: http://host/path/index.php
-自带了5个例子,点"测试"就可以了,因为抓回来的都是html,可能看起来页面会乱,那就"查看源代码" 即可;
-点击"开始"入库;
-命令行下运行参数还没搞,简单点就curl "http://host/path/index.php?file=2.php&act=start"
+配置config.php下db,redis设置
+Usage: php index.php <1-n> <test|start|stop|restart>
+比如: php index.php 1 test
+手动停止请Ctrl+c
+SiteConfig目录下自带了5个例子;
+第一个例子入库2599条数据 时间从2016-08-22 22:15:13 - 2016-08-22 22:17:48 才用时2分半
 ```
 
 #### <i class="icon-file"></i> 为啥叫"鸠摩智"

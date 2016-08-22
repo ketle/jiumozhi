@@ -1,14 +1,29 @@
 <?php
 set_time_limit(0);
-ini_set('memory_limit', '3000M');
-ignore_user_abort(true);
+ini_set('memory_limit', '100M');
+//ignore_user_abort(true);
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 require './vendor/autoload.php';
 
+if (php_sapi_name() != "cli") {
+    die("必须在cli下运行 \n"); 
+}
+
+//print_r($argc);
+if ($argc != 3) { 
+    die("Usage: php index.php <1-n> <test|start|stop|restart> \n"); 
+}
+array_shift($argv); 
+
+//print_r($argv);die;
+
+$cliIncludeFile = $argv[0];
+$cliAct = $argv[1];
+
 $siteConfigDir = './SiteConfig/';
 
-if (!$_GET['file']) {
+if (!$cliIncludeFile) {
     echo "<br>"; 
     foreach (new DirectoryIterator($siteConfigDir) as $fileInfo) {
         if($fileInfo->isDot()) continue;
@@ -27,34 +42,46 @@ if (!$_GET['file']) {
 
     $t1 = microtime(true);
 
-    $includeFile = $siteConfigDir.$_GET['file'];
+    $includeFile = $siteConfigDir.$cliIncludeFile.'.php';
     include($includeFile);
     $configs['siteConfigDir'] = $siteConfigDir;
 
     //print_r($configs);
-    if ($_GET['act'] == 'test') {
+    if ($cliAct == 'test') {
+        $configs['dbConfig'] = include './config.php';
         @unlink($configs['siteConfigDir'].$configs['id'].'stop.txt');
         $configs['debug'] = 1;
         $configs['debugNum'] = 36;
+        $configs['action'] = 'test';
         $crawler = new Crawler($configs);
         $crawler->start(); 
-    }elseif ($_GET['act'] == 'start') {
+    }elseif ($cliAct == 'start') {
 
         $configs['dbConfig'] = include './config.php';
+        $configs['action'] = 'start';
         //print_r($dbConfig);die;
         
 
         @unlink($configs['siteConfigDir'].$configs['id'].'stop.txt');
         $crawler = new Crawler($configs);
         $crawler->start(); 
-    }elseif ($_GET['act'] == 'stop') {
+    }elseif ($cliAct == 'restart') {
+
+        $configs['dbConfig'] = include './config.php';
+        $configs['action'] = 'restart';
+        //print_r($dbConfig);die; 
+
+        @unlink($configs['siteConfigDir'].$configs['id'].'stop.txt');
+        $crawler = new Crawler($configs);
+        $crawler->start(); 
+    }elseif ($cliAct == 'stop') {
         file_put_contents($configs['siteConfigDir'].$configs['id'].'stop.txt', '');
-        echo '已经停了吧 - -';die;
+        echo "已经停了吧 - -\n";die;
     }
 
 
     $t2 = microtime(true);
-    echo '<br>耗时'.round($t2-$t1,3).'秒';
+    echo "\n耗时".round($t2-$t1,3)."秒\n";
 }
 
 

@@ -1,9 +1,26 @@
 <?php
 class Queue  
 { 
+    public $key = 'jiumozhiQueue'; 
     public $queue = []; 
     public $queueAll = []; 
+    public $host = '127.0.0.1'; 
+    public $port = 6379; 
     
+
+    public function __construct($host,$port,$id,$action){
+        $this->host = $host;
+        $this->port = $port;
+        $this->key = $this->key.$id;
+
+        if ($action == 'restart') {
+            $this->getInstance()->del($this->key); 
+            $this->getInstance()->del($this->key.'AllUrl'); 
+        }
+ 
+
+    }
+
     /**
      * [尾部入队]
      * @param [type] $value ['url'=>$url,'opt'=$opt]
@@ -11,44 +28,48 @@ class Queue
     public function addLast($value)  
     { 
         if ($value['opt']['reserve'] == true) { //去重选项
-            return array_push($this->queue,$value); 
+            return $this->getInstance()->rpush($this->key, serialize($value)); 
         }
 
-        if (!$this->queueAll[$value["url"]]) {        
-            $this->queueAll[$value["url"]]=1; 
-            return array_push($this->queue,$value); 
+        //print_r($this->getInstance());
+
+        $allUrl = unserialize($this->getInstance()->get($this->key.'AllUrl')); 
+        //echo 'allUrl count:'.count($allUrl)."\n";
+
+        if (!$allUrl[$value["url"]]) {        
+            $allUrl[$value["url"]]=1; 
+            $this->getInstance()->set($this->key.'AllUrl', serialize($allUrl));             
+            return $this->getInstance()->rpush($this->key, serialize($value)); 
         }
+
+
+
     } 
     /**（头部）出队**/ 
     public function removeFirst()  
     { 
-        return array_shift($this->queue); 
-    } 
-    /*
-    public function removeLast()  
-    { 
-        return array_pop($this->queue); 
-    } 
-    public function addFirst($value)  
-    { 
-        return array_unshift($this->queue,$value); 
-    } 
-    public function makeEmpty()  
-    { 
-        unset($this->queue);
+        return unserialize($this->getInstance()->lpop($this->key)); 
     } 
     
-    public function getFirst()  
-    { 
-        return reset($this->queue); 
-    } 
-    public function getLast()  
-    { 
-        return end($this->queue); 
-    }*/
     /** 获取长度 **/
     public function getLength()  
     { 
-        return count($this->queue); 
+        return $this->getInstance()->llen($this->key); 
+    }
+
+    public function getInstance()
+    {
+        static $instances = array();
+        $key = getmypid();
+        if (empty($instances[$key]))
+        {
+            $instances[$key] = new Redis();
+            //echo 111;
+            //print_r($instances[$key]);
+
+            $instances[$key]->connect($this->host, $this->port);
+        }
+ 
+        return $instances[$key];
     }
 }

@@ -45,13 +45,19 @@ $configs['onProcessScanPage'] = function (&$page,&$content,&$site) {
     print_r($site['helperUrls']);
     print_r($site['contentUrls']);*/
 
-    $site['addUrl']('http://fuliba.net/%e6%88%91%e6%9c%89%e4%b8%80%e4%b8%aa%e6%a2%a6%e6%83%b3%ef%bc%9a%e9%9d%a2%e6%9c%9d%e5%8f%b8%e6%9c%ba%ef%bc%8c%e4%ba%ba%e6%bb%a1%e8%bd%a6%e5%bc%80.html');
+    //$site['addUrl']('http://fuliba.net/%e6%88%91%e6%9c%89%e4%b8%80%e4%b8%aa%e6%a2%a6%e6%83%b3%ef%bc%9a%e9%9d%a2%e6%9c%9d%e5%8f%b8%e6%9c%ba%ef%bc%8c%e4%ba%ba%e6%bb%a1%e8%bd%a6%e5%bc%80.html');
+
+    $content = str_replace('<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />', '', $content); //奇怪的网站,一会儿utf8,一会儿gb2312,导致xpath不正常;
+
+
     return true;
 };
 $configs['onProcessHelperPage'] = function (&$page,&$content,&$site) {
+    $content = str_replace('<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />', '', $content);
     return true;
 };
 $configs['onProcessContentPage'] = function (&$page,&$content,&$site) {
+    $content = str_replace('<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />', '', $content);
     return true;
 };
 

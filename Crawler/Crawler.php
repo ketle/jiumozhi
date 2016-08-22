@@ -60,117 +60,147 @@ class Crawler {
                 break;
             }
             //执行开关
-
-            //判断队列是否为空,下一个ScanUrl
-            if ($this->queueObj->getLength()>0) {
-                $queueArray = $this->removeQueue($this->configs['thread']);
-            }else{
-                //nextScanUrl
-                $this->scanUrlsIndex++;
-                if ($this->configs['scanUrls'][$this->scanUrlsIndex]) {
-                    $queueArray[] = ['url'=>$this->configs['scanUrls'][$this->scanUrlsIndex]];                
-                }else{
-                    break;
-                    //die('done');
-                }
+                 
+            if ($this->queueObj->getLength()==0) {
+                break;
             }
-            //判断队列是否为空,下一个ScanUrl
-
-            //
-            $this->configs['onChangeProxy']($this->site); //onChangeProxy回调
-            $this->curl($queueArray);
-            unset($queueArray);
-
-            $this->curlObj->success(function($instance) {
-                $this->log('curl:'.$instance->url); 
-                  
-                $this->page['url'] = $instance->url;
-      
-                $this->page['raw'] = $instance->response;
-                $this->page['raw'] = $this->convertUtf8($this->page['raw']).$instance->requestHeaders['contextData']; //加上附加数据
-                
-
-                if ($instance->requestHeaders['contextData']) {
-                    $this->log('contextData:'.$instance->requestHeaders['contextData'],3);                    
+            for ($i = 1; $i <= $this->configs['dbConfig']['maxProcess']; ++$i)
+            {
+                $pid = pcntl_fork();
+                if ($pid == -1)
+                {
+                    echo "--------fork child process failed--------\n";
+                    exit(0);
                 }
-
-                $this->page['request'] = $instance;//还没改造
- 
-
-                $this->configs['isAntiSpider']($this->page['url'],$this->page['raw']); //isAntiSpider回调
-                $this->configs['afterDownloadPage']($this->page,$this->site); //afterDownloadPage回调 
-                
-
-                //scanUrls
-                if (in_array($this->page['url'], $this->configs['scanUrls'])) {
-                    $this->log('in scanUrls:'.$this->page['url']); 
-                                                     
-                    $r1 = $this->configs['onProcessScanPage']($this->page,$this->page['raw'],$this->site); //onProcessScanPage 回调
-                    //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
-                    if ($r1 == true) {
-                        $this->parseAllUrl($this->page['raw']); 
-                    } 
+                if (!$pid)
+                {
                     
-                } 
-
-                
-
-                //列表页
-                foreach ($this->configs['helperUrlRegexes'] as $key => $value) {
-                    if (preg_match("|".$value."$|", $this->page['url'])) {   
-                        $this->log('in helperUrl:'.$this->page['url']); 
-
-                        if (strstr($instance->responseHeaders['content-type'],'application/json')) { //列表页是json数据
-                            $this->page['raw'] = serialize($this->page['raw']);
-                        }             
-                        $r1 = $this->configs['onProcessHelperPage']($this->page,$this->page['raw'],$this->site); //
-                        
-                        
-                        if (!$this->configs['contentUrlRegexes']) {
-                            //当内容页正则为空时,可以直接解析列表页
-                            //$this->log('xxxxxxxxxxxxxxx:'.$this->page['url']);      
-                            $this->parseData($this->page['url'],$this->page['raw']);
+                    //判断队列是否为空,下一个ScanUrl
+                    if ($this->queueObj->getLength()>0) {
+                        $queueArray = $this->removeQueue($this->configs['thread']);
+                    }else{
+                        //nextScanUrl
+                        $this->scanUrlsIndex++;
+                        if ($this->configs['scanUrls'][$this->scanUrlsIndex]) {
+                            $queueArray[] = ['url'=>$this->configs['scanUrls'][$this->scanUrlsIndex]];                
+                        }else{
+                            break 2;
+                            //die('done');
                         }
-                        if ($r1 == true) {
-                            $this->parseAllUrl($this->page['raw']); 
-                        }
-                        break;
-                    } else {
-                        
                     }
+                    //判断队列是否为空,下一个ScanUrl
+
+                    //
+                    $this->configs['onChangeProxy']($this->site); //onChangeProxy回调
+                    $this->curl($queueArray);
+                    unset($queueArray);
+
+                    $this->curlObj->success(function($instance) {
+                        $this->log('curl:'.$instance->url); 
+                          
+                        $this->page['url'] = $instance->url;
+              
+                        $this->page['raw'] = $instance->response;
+                        $this->page['raw'] = $this->convertUtf8($this->page['raw']).$instance->requestHeaders['contextData']; //加上附加数据
+                        
+
+                        if ($instance->requestHeaders['contextData']) {
+                            $this->log('contextData:'.$instance->requestHeaders['contextData'],3);                    
+                        }
+
+                        $this->page['request'] = $instance;//还没改造
+         
+
+                        $this->configs['isAntiSpider']($this->page['url'],$this->page['raw']); //isAntiSpider回调
+                        $this->configs['afterDownloadPage']($this->page,$this->site); //afterDownloadPage回调 
+                        
+
+                        //scanUrls
+                        if (in_array($this->page['url'], $this->configs['scanUrls'])) {
+                            $this->log('in scanUrls:'.$this->page['url']); 
+                                                             
+                            $r1 = $this->configs['onProcessScanPage']($this->page,$this->page['raw'],$this->site); //onProcessScanPage 回调
+                            //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
+                            if ($r1 == true) {
+                                $this->parseAllUrl($this->page['raw']); 
+                            } 
+                            
+                        } 
+
+                        
+
+                        //列表页
+                        foreach ($this->configs['helperUrlRegexes'] as $key => $value) {
+                            if (preg_match("|".$value."$|", $this->page['url'])) {   
+                                $this->log('in helperUrl:'.$this->page['url']); 
+
+                                if (strstr($instance->responseHeaders['content-type'],'application/json')) { //列表页是json数据
+                                    $this->page['raw'] = serialize($this->page['raw']);
+                                }             
+                                $r1 = $this->configs['onProcessHelperPage']($this->page,$this->page['raw'],$this->site); //
+                                
+                                
+                                if (!$this->configs['contentUrlRegexes']) {
+                                    //当内容页正则为空时,可以直接解析列表页
+                                    //$this->log('xxxxxxxxxxxxxxx:'.$this->page['url']);      
+                                    $this->parseData($this->page['url'],$this->page['raw']);
+                                }
+                                if ($r1 == true) {
+                                    $this->parseAllUrl($this->page['raw']); 
+                                }
+                                break;
+                            } else {
+                                
+                            }
+                        }
+                        //列表页
+                       
+
+                        //内容页                
+                        foreach ($this->configs['contentUrlRegexes'] as $key => $value) {
+                            if (preg_match("|".$value."$|", $this->page['url'])) {                            
+                                $this->log('in contentUrl:'.$this->page['url']);        
+                                $r1 = $this->configs['onProcessContentPage']($this->page,$this->page['raw'],$this->site); //onProcessContentPage 回调
+                                //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
+                                $this->parseData($this->page['url'],$this->page['raw']);
+                                if ($r1 == true) {
+                                    $this->parseAllUrl($this->page['raw']); 
+                                }
+                                break;
+                            } else {
+                                
+                            }
+                        } 
+                        //内容页  
+                        unset($instance);            
+
+                        //ob_flush();
+                        //flush();
+                        //usleep(1000000);  
+                    }); 
+
+                    $this->curlObj->error(function($instance) {
+                        $this->log('call to "' . $instance->url . '" was unsuccessful.' . "\n".'error code: ' . $instance->errorCode . "\n".'error message: ' . $instance->errorMessage . "\n",3);
+                        unset($instance);       
+                    }); 
+
+                    $this->curlObj->start(); 
+                    exit($i);
+
                 }
-                //列表页
-               
+                usleep(1);
+            }
+            while (pcntl_waitpid(0, $status) != -1)
+            {
+                $status = pcntl_wexitstatus($status);
+                if (pcntl_wifexited($status))
+                {
+                    echo "yes";
+                }
+                echo "--------$status finished--------\n";
+            }
 
-                //内容页                
-                foreach ($this->configs['contentUrlRegexes'] as $key => $value) {
-                    if (preg_match("|".$value."$|", $this->page['url'])) {                            
-                        $this->log('in contentUrl:'.$this->page['url']);        
-                        $r1 = $this->configs['onProcessContentPage']($this->page,$this->page['raw'],$this->site); //onProcessContentPage 回调
-                        //$this->log('preg_match:'.$value.' -> '.$this->page['url']); 
-                        $this->parseData($this->page['url'],$this->page['raw']);
-                        if ($r1 == true) {
-                            $this->parseAllUrl($this->page['raw']); 
-                        }
-                        break;
-                    } else {
-                        
-                    }
-                } 
-                //内容页  
-                unset($instance);            
-
-                ob_flush();
-                flush();
-                //usleep(1000000);  
-            }); 
-
-            $this->curlObj->error(function($instance) {
-                $this->log('call to "' . $instance->url . '" was unsuccessful.' . "\n".'error code: ' . $instance->errorCode . "\n".'error message: ' . $instance->errorMessage . "\n",3);
-                unset($instance);       
-            }); 
-
-            $this->curlObj->start();
+            
 
         }
 
@@ -246,8 +276,8 @@ class Crawler {
      */
 
     public function addQueue($url,$opt=[]){
-        
-        $this->queueObj = $this->queueObj?$this->queueObj:new Queue();              
+        //print_r($this->configs['dbConfig']);die;
+        $this->queueObj = $this->queueObj?$this->queueObj:new Queue($this->configs['dbConfig']['redis']['host'],$this->configs['dbConfig']['redis']['port'],$this->configs['id'],$this->configs['action']);              
         //$this->queueObj->addLast($url);  
         $temp1 = parse_url($url);
         if (!$temp1['scheme']) {    //相对地址
@@ -305,8 +335,8 @@ class Crawler {
         $this->configs['afterExtractPage']($this->page,$fieldContent); //afterExtractPage回调
 
 
-        if ($this->db && $fieldContent) {
-            $this->db->insert($this->tableName, [
+        if ($this->getDbInstance() && $fieldContent) {
+            $this->getDbInstance()->insert($this->tableName, [
                 "site" => $this->configs['id'],
                 "url" => $url,
                 "data" => $fieldContent
@@ -457,6 +487,19 @@ class Crawler {
     }
 
     
+
+    public function getCurlInstance()
+    {
+        static $instances = array();
+        $key = getmypid();
+        if (empty($instances[$key]))
+        { 
+            $instances[$key] = new MultiCurl();; 
+        }
+        return $instances[$key];
+    }
+
+
     /**
      * [多个请求]
      * @param  [array] queueArray [description]
@@ -464,11 +507,8 @@ class Crawler {
 
     public function curl($queueArray){
 
-        if ($this->curlTimes%10 == 0) {
-            unset($this->curlObj);
-        }
-
-        $this->curlObj = $this->curlObj?$this->curlObj:new MultiCurl();
+        $this->curlObj = $this->getCurlInstance();
+        //print_r($this->curlObj);
 
         if ($this->site['header']) { 
             foreach ($this->site['header'] as $key => $value) {
@@ -526,9 +566,9 @@ class Crawler {
 
                 $this->curlObj->addGet($v['url'],$v['opt']['data']); 
             }
-            $this->curlTimes++;
+            //$this->curlTimes++;
 
-            $this->log('curlTimes:'.$this->curlTimes); 
+            //$this->log('curlTimes:'.$this->curlTimes); 
         }
 
     }
@@ -727,13 +767,29 @@ class Crawler {
 
     }
 
+
+    public function getDbInstance()
+    {
+        static $instances = array();
+        $key = getmypid();
+        if (empty($instances[$key]))
+        { 
+            $instances[$key] = new \medoo($this->configs['dbConfig']['db']); 
+        }
+        return $instances[$key];
+    }
+
     public function initDb(){
 
-        if ($this->configs['dbConfig']) {
+        if ($this->configs['action'] == 'start' || $this->configs['action'] == 'restart') {
             
             $this->db = new \medoo($this->configs['dbConfig']['db']); 
 
             $this->tableName = 'jmz_data'.$this->configs['id'];
+
+            if ($this->configs['action'] == 'restart') {
+                $this->db->query("drop TABLE  `".$this->tableName."`;");
+            }
             
 
             $count = $this->db->count($tableName, []);
@@ -782,15 +838,17 @@ class Crawler {
         $str = is_array($str)?json_encode($str,JSON_UNESCAPED_UNICODE):$str;
 
         echo date("Y-m-d H:i:s")." ";
-        if ($level == 1) {
-            echo '<font color="#FF9933">'."\n".$str."\n".'</font>'.'<br>'."\n";
-        }elseif ($level == 2) {
-            echo '<font color="#0033FF">'."\n".$str."\n".'</font>'.'<br>'."\n";
+        if ($level == 1) { 
+            echo "\e[1;33m $str \e[0m \n";
+        }elseif ($level == 2) { 
+            echo "\e[1;34m $str \e[0m \n";
         }elseif ($level == 3) {
-            echo '<font color="#FF0000">'."\n".$str."\n".'</font>'.'<br>'."\n";
+            echo "\e[1;31m $str \e[0m \n";
         }else{
-            echo "$str <br>\n";
+            echo "$str \n";
         }
+
+ 
         unset($str);
 
 
