@@ -12,7 +12,7 @@ if (php_sapi_name() != "cli") {
 
 //print_r($argc);
 if ($argc != 3) { 
-    die("Usage: php index.php <1-n> <test|start|stop|restart> \n"); 
+    die("Usage: php index.php <1-n> <test|clean|start|stop|restart> \n"); 
 }
 array_shift($argv); 
 
@@ -77,11 +77,20 @@ if (!$cliIncludeFile) {
     }elseif ($cliAct == 'stop') {
         file_put_contents($configs['siteConfigDir'].$configs['id'].'stop.txt', '');
         echo "已经停了吧 - -\n";die;
+    }elseif ($cliAct == 'clean') {
+        $configs['dbConfig'] = include './config.php';
+        $instances = new Redis();
+        $instances->connect($configs['dbConfig']['redis']['host'], $configs['dbConfig']['redis']['port']);
+
+        $instances->del('jiumozhiQueue'.$configs['id']); 
+        $instances->del('jiumozhiQueue'.$configs['id'].'AllUrl'); 
+        echo "清理redis队列完毕\n";
+
     }
 
 
     $t2 = microtime(true);
-    echo "\n耗时".round($t2-$t1,3)."秒\n";
+    echo "耗时".round($t2-$t1,3)."秒\n";
 }
 
 

@@ -35,8 +35,14 @@ class Crawler {
         $temp1 = parse_url($this->configs['scanUrls'][$this->scanUrlsIndex]);
         $this->configs['baseUrl'] = $temp1['scheme'].'://'.$temp1['host'].'/';
         $this->configs['baseUrlPath'] = $temp1['scheme'].'://'.$temp1['host'].$temp1['path'];
-        $this->addQueue($this->configs['scanUrls'][$this->scanUrlsIndex],['type'=>1]); 
         unset($temp1);
+
+
+        $this->queueObj = new Queue($this->configs['dbConfig']['redis']['host'],$this->configs['dbConfig']['redis']['port'],$this->configs['id'],$this->configs['action']);  
+        if ($this->queueObj->getLength()==0) {
+            $this->addQueue($this->configs['scanUrls'][$this->scanUrlsIndex],['type'=>1]); 
+        }
+        
         
     }
 
@@ -69,7 +75,7 @@ class Crawler {
                 $pid = pcntl_fork();
                 if ($pid == -1)
                 {
-                    echo "--------fork child process failed--------\n";
+                    echo "fork child process failed\n";
                     exit(0);
                 }
                 if (!$pid)
@@ -195,9 +201,9 @@ class Crawler {
                 $status = pcntl_wexitstatus($status);
                 if (pcntl_wifexited($status))
                 {
-                    echo "yes";
+                    //echo "";
                 }
-                echo "--------$status finished--------\n";
+                echo "$status finished\n";
             }
 
             
@@ -276,8 +282,8 @@ class Crawler {
      */
 
     public function addQueue($url,$opt=[]){
-        //print_r($this->configs['dbConfig']);die;
-        $this->queueObj = $this->queueObj?$this->queueObj:new Queue($this->configs['dbConfig']['redis']['host'],$this->configs['dbConfig']['redis']['port'],$this->configs['id'],$this->configs['action']);              
+        //print_r($this->configs['dbConfig']);die;      
+        $this->queueObj = $this->queueObj?$this->queueObj:new Queue($this->configs['dbConfig']['redis']['host'],$this->configs['dbConfig']['redis']['port'],$this->configs['id'],$this->configs['action']);        
         //$this->queueObj->addLast($url);  
         $temp1 = parse_url($url);
         if (!$temp1['scheme']) {    //相对地址
@@ -336,11 +342,12 @@ class Crawler {
 
 
         if ($this->getDbInstance() && $fieldContent) {
-            $this->getDbInstance()->insert($this->tableName, [
+        	$this->getDbInstance()->insert($this->tableName, [
                 "site" => $this->configs['id'],
                 "url" => $url,
-                "data" => $fieldContent
+                "data" => json_encode($fieldContent,JSON_UNESCAPED_UNICODE)
             ]);
+             
         }
 
         if ($this->configs['debug'] ) {
