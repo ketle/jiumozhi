@@ -8,7 +8,7 @@ return [
 						'server' => '127.0.0.1',
 						'port' => '3306',
 						'username' => 'root',
-						'password' => 'root789',
+						'password' => 'root123',
 						'charset' => 'utf8'
 						],
 			'redis' => [

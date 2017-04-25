@@ -49,6 +49,15 @@ if (!$cliIncludeFile) {
     //print_r($configs);
     if ($cliAct == 'test') {
         $configs['dbConfig'] = include './config.php';
+        $instances = new Redis();
+        $instances->connect($configs['dbConfig']['redis']['host'], $configs['dbConfig']['redis']['port']);
+
+        $instances->del('jiumozhiQueue'.$configs['id']); 
+        $instances->del('jiumozhiQueue'.$configs['id'].'AllUrl'); 
+        echo "清理redis队列完毕\n";
+
+
+        
         @unlink($configs['siteConfigDir'].$configs['id'].'stop.txt');
         $configs['debug'] = 1;
         $configs['debugNum'] = 36;
